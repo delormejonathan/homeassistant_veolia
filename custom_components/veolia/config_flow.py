@@ -97,9 +97,14 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the input of credentials."""
         LOGGER.debug("Request credentials")
         if user_input is not None:
+            username = user_input[CONF_USERNAME].strip()
+            sanitized_input = {**user_input, CONF_USERNAME: username}
+            if username != user_input[CONF_USERNAME]:
+                LOGGER.debug("Trimmed whitespace from Veolia username before login")
+
             try:
                 api = VeoliaAPI(
-                    user_input[CONF_USERNAME],
+                    username,
                     user_input[CONF_PASSWORD],
                     async_get_clientsession(self.hass),
                     portal_url=self._portal_url,
@@ -108,25 +113,25 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
                 if valid:
                     return self.async_create_entry(
-                        title=user_input[CONF_USERNAME],
-                        data={**user_input, CONF_PORTAL_URL: self._portal_url},
+                        title=username,
+                        data={**sanitized_input, CONF_PORTAL_URL: self._portal_url},
                     )
             except VeoliaAPIInvalidCredentialsError as err:
                 LOGGER.warning(
-                    "Veolia login rejected by API for username %s: %s",
-                    user_input[CONF_USERNAME],
+                    "Veolia login rejected for username %r: %s",
+                    username,
                     err,
                 )
                 self._errors["base"] = "invalid_credentials"
             except Exception as err:  # noqa: BLE001
                 LOGGER.exception(
-                    "Veolia login failed with unexpected error for username %s: %s",
-                    user_input[CONF_USERNAME],
+                    "Veolia login failed with unexpected error for username %r: %s",
+                    username,
                     err,
                 )
                 self._errors["base"] = "unknown"
 
-            return await self._show_credentials_form(user_input)
+            return await self._show_credentials_form(sanitized_input)
 
         return await self._show_credentials_form(user_input)
 
