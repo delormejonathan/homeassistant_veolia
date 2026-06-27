@@ -111,10 +111,19 @@ class VeoliaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         title=user_input[CONF_USERNAME],
                         data={**user_input, CONF_PORTAL_URL: self._portal_url},
                     )
-            except VeoliaAPIInvalidCredentialsError:
+            except VeoliaAPIInvalidCredentialsError as err:
+                LOGGER.warning(
+                    "Veolia login rejected by API for username %s: %s",
+                    user_input[CONF_USERNAME],
+                    err,
+                )
                 self._errors["base"] = "invalid_credentials"
-            except Exception:  # noqa: BLE001
-                LOGGER.debug("Unknown exception")
+            except Exception as err:  # noqa: BLE001
+                LOGGER.exception(
+                    "Veolia login failed with unexpected error for username %s: %s",
+                    user_input[CONF_USERNAME],
+                    err,
+                )
                 self._errors["base"] = "unknown"
 
             return await self._show_credentials_form(user_input)
